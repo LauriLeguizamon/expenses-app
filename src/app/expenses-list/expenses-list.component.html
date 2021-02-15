@@ -1,0 +1,63 @@
+<section class="balance-container">
+  <span id="balance" class="balance">{{ totalBudget | currency }}</span>
+</section>
+
+<table class="table container custom-table">
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th class="mobile-res">Description</th>
+      <th>Ammount</th>
+      <th>Type</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr *ngFor="let expense of expenses; index as index">
+      <td>{{ expense.name }}</td>
+      <td class="mobile-res">{{ expense.description }}</td>
+      <td>{{ expense.ammount | currency }}</td>
+      <td>{{ expense.type }}</td>
+      <td>
+        <button class="button is-danger mr-2" (click)="deleteExpense(expense, index)">
+          Delete
+        </button>
+        <button class="button is-primary" (click)="editExpense(expense)">Edit</button>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+<form [formGroup]="expenseForm" (ngSubmit)="addExpense()"class="expense-form container">
+  <div class="field">
+    <label class="label">Id</label>
+    <input class="input" type="number" formControlName="id" />
+  </div>
+  <div class="field">
+    <label class="label">Name</label>
+    <input class="input" type="text" formControlName="name" />
+  </div>
+  <div class="field">
+    <label class="label">Description</label>
+    <input class="input" type="text" formControlName="description" />
+  </div>
+  <div class="field">
+    <label class="label">Ammount</label>
+    <input class="input" type="number" formControlName="ammount" />
+  </div>
+  <div class="field">
+    <label class="radio">
+      <input id="income" type="radio" name="question" value="income"(change)="onRadioChange($event)">
+      Income
+    </label>
+    <label class="radio">
+      <input id="outcome" type="radio" name="question" value="outcome" (change)="onRadioChange($event)">
+      Outcome
+    </label>
+  </div>
+  <button type="submit" *ngIf="!editingExpense" class="button submit-btn is-link">ADD EXPENSE</button>
+  <div class="edit-btns">
+    <button *ngIf="editingExpense" class="button edit-btn is-link" (click)="edit()">EDIT EXPENSE</button>
+    <button *ngIf="editingExpense" class="button is-danger" (click)="cancelEdit()">CANCEL</button>
+  </div>
+</form>
