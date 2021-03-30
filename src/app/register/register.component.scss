@@ -1,0 +1,18 @@
+.box {
+  margin: 10% auto;
+  max-width: 600px;
+
+  .register-link {
+    color: rgb(56, 9, 184)
+  }
+
+  .submit-btn {
+    margin-top: 20px;
+  }
+}
+
+@media (max-width: 426px) {
+  .submit-btn {
+    width: 100%;
+  }
+}

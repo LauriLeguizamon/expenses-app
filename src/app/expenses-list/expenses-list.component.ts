@@ -1,71 +1,102 @@
 import { Component, OnInit } from '@angular/core';
 import { Expense } from '../interfaces/expense';
 import { ExpensesService } from '../services/expenses.service';
-import { FormBuilder, FormGroup } from '@angular/forms'
+import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { BudgetService } from '../services/budget.service';
+import { AuthService } from '../services/auth.service';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-expenses-list',
   templateUrl: './expenses-list.component.html',
-  styleUrls: ['./expenses-list.component.scss']
+  styleUrls: ['./expenses-list.component.scss'],
 })
 export class ExpensesListComponent implements OnInit {
-  expenses: Expense[]
+  expenses: Expense[];
   expenseEdited: Expense;
   expenseForm: FormGroup = this.fb.group({
-    id: [0],
-    name: [''],
-    description: [''],
-    ammount: [0],
-  })
+    name: ['', [Validators.required]],
+    description: ['', [Validators.required]],
+    ammount: [0, [Validators.required, Validators.min(1)]],
+  });
   editingExpense: boolean = false;
   radioValue: 'income' | 'outcome';
   totalBudget: number;
-  outcomeRadio = document.getElementById('outcome') as HTMLInputElement;
-  incomeRadio = document.getElementById('income') as HTMLInputElement;
-  
-  constructor(private expensesService: ExpensesService, private fb: FormBuilder, private budgetService: BudgetService) { }
+  outcomeRadio: HTMLInputElement;
+  incomeRadio: HTMLInputElement;
+  radioNotificationAlert: boolean;
 
-  ngOnInit(): void {
-    this.expenses = this.expensesService.getExpenses();
-    this.totalBudget = this.budgetService.getBudget()
-    this.changeColor();
+  constructor(
+    private expensesService: ExpensesService,
+    private fb: FormBuilder,
+    private authService: AuthService,
+    private router: Router
+  ) {}
+
+  ngOnInit() {
+    this.authService.loginUserById().subscribe((user) => {
+      if (user === null) {
+        this.router.navigate(['/login']);
+      }
+
+      this.authService.user = user;
+      this.totalBudget = user.totalBudget;
+      this.changeColor();
+      this.expensesService.getExpenses().subscribe((expenses) => {
+        this.expenses = expenses;
+      });
+    });
+
+    this.outcomeRadio = document.getElementById('outcome') as HTMLInputElement;
+    this.incomeRadio = document.getElementById('income') as HTMLInputElement;
   }
-  
+
   deleteExpense(expense: Expense, index: number) {
     if (confirm('Are you sure?')) {
-      this.expensesService.deleteExpense(index);
-      this.expensesService.getExpenses();
-      this.subtractBudget(expense.ammount);
+      this.expensesService.deleteExpense(expense.id).subscribe();
+      this.expenses.splice(index, 1);
+      if (expense.type === 'income') {
+        this.subtractBudget(expense.ammount);
+      } else {
+        this.addBudget(expense.ammount);
+      }
       console.log(expense);
     }
     this.changeColor();
   }
 
   addExpense() {
-    const newExpense = {...this.expenseForm.value, type: this.radioValue};
-    this.expensesService.addExpense(newExpense);
-    this.expenses = this.expensesService.getExpenses();
-    if(newExpense.type === 'income') {
-      this.addBudget(newExpense.ammount);
-    } else {
-      this.subtractBudget(newExpense.ammount);
+    if (this.radioValue !== undefined || null) {
+      const newExpense: Expense = {
+        ...this.expenseForm.value,
+        type: this.radioValue,
+        user_id: this.authService.user.id,
+      };
+      this.expensesService.addExpense(newExpense).subscribe((e) => {
+        this.expenses.push(e);
+      });
+      if (newExpense.type === 'income') {
+        this.addBudget(newExpense.ammount);
+      } else {
+        this.subtractBudget(newExpense.ammount);
+      }
+
+      this.changeColor();
+      this.radioNotificationAlert = false;
+      this.expenseForm.reset();
+      return;
     }
-      
-    this.changeColor();
-    this.expenseForm.reset();
+    this.radioNotificationAlert = true;
   }
 
   editExpense(expense: Expense) {
     this.editingExpense = true;
-    this.expenseForm.get('id').setValue(expense.id)
     this.expenseForm.get('name').setValue(expense.name);
     this.expenseForm.get('description').setValue(expense.description);
     this.expenseForm.get('ammount').setValue(expense.ammount);
-    if (expense.type === 'income') { 
+    if (expense.type === 'income') {
       this.incomeRadio.checked = true;
     } else {
-      
       this.outcomeRadio.checked = true;
     }
     this.expenseEdited = expense;
@@ -73,55 +104,68 @@ export class ExpensesListComponent implements OnInit {
   }
 
   onRadioChange(event) {
-    this.radioValue = event.target.value
+    this.radioValue = event.target.value;
   }
 
   edit() {
-    this.checkRadio()
-    const finalExpense: Expense = {...this.expenseForm.value, type: this.radioValue};
-    const index = this.expenses.findIndex( e => e.id === this.expenseEdited.id);
+    this.checkRadio();
+    let finalExpense: Expense = {
+      ...this.expenseForm.value,
+      type: this.radioValue,
+    };
+    const index = this.expenses.findIndex(
+      (e) => e.id === this.expenseEdited.id
+      );
+    finalExpense = {...finalExpense, id: this.expenses[index].id}
     this.expenses[index] = finalExpense;
-    this.editingExpense = false;
-    console.log(this.expenses);
+    this.expensesService.updateExpense(finalExpense).subscribe();
 
-    // const temporalCorrectionExpense = finalExpense.ammount * 2;
-    // if (this.expenseEdited.type === finalExpense.type) {
-    //   this.subtractBudget(this.expenseEdited.ammount);
-    //   this.addBudget(finalExpense.ammount);
-    // } else if (finalExpense.type === 'income'){
-    //   this.addBudget(temporalCorrectionExpense);
-    // } else {
-    //   this.subtractBudget(temporalCorrectionExpense);
-    // }
-
-    // console.log(this.expenseEdited.ammount);
-    // console.log(finalExpense.ammount);
-    // console.log(finalExpense.type);
-    if (finalExpense.type === 'income') {
-      this.addBudget(finalExpense.ammount * 2);
-    } else {
-      console.log('estas aca en outcome')
+    if (
+      this.expenseEdited.type === 'outcome' &&
+      finalExpense.type === 'income'
+    ) {
+      let finalAmmount = this.expenseEdited.ammount + finalExpense.ammount
+      this.addBudget(finalAmmount);
+    } else if (
+      this.expenseEdited.type === 'income' &&
+      finalExpense.type === 'outcome'
+    ) {
+      let finalAmmount = this.expenseEdited.ammount + finalExpense.ammount
+      this.subtractBudget(finalAmmount);
+    } else if (
+      this.expenseEdited.type === 'income' &&
+      finalExpense.type === 'income'
+    ) {
       this.subtractBudget(this.expenseEdited.ammount);
+      this.addBudget(finalExpense.ammount);
+    } else if (
+      this.expenseEdited.type === 'outcome' &&
+      finalExpense.type === 'outcome'
+    ) {
+      this.addBudget(this.expenseEdited.ammount);
       this.subtractBudget(finalExpense.ammount);
     }
 
+    this.editingExpense = false;
     this.changeColor();
     this.expenseForm.reset();
   }
 
   addBudget(ammount: number) {
-    this.totalBudget = this.budgetService.addBudget(ammount);
+    this.totalBudget += ammount;
+    this.expensesService.updateTotalBudget(this.totalBudget).subscribe();
   }
 
   subtractBudget(ammount: number) {
-    this.totalBudget = this.budgetService.subtractBudget(ammount);
+    this.totalBudget -= ammount;
+    this.expensesService.updateTotalBudget(this.totalBudget).subscribe();
   }
 
   changeColor() {
     if (this.totalBudget < 0) {
-      document.getElementById("balance").style.color = "red"
+      document.getElementById('balance').style.color = 'red';
     } else {
-      document.getElementById("balance").style.color = "green"
+      document.getElementById('balance').style.color = 'green';
     }
   }
 

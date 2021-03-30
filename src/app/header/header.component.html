@@ -1,0 +1,7 @@
+<nav class="header">
+  <h1 class="nav-title">LARRYEXPENSES</h1>
+  <div class="buttons">
+    <button *ngIf="!loggedIn" class="button is-outlined is-success sign-in-btn" routerLink="/login">Sign in</button>
+    <button *ngIf="loggedIn" class="button is-outlined is-danger sign-in-btn" (click)="logout()">logout</button>
+  </div>
+</nav>

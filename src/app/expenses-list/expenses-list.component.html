@@ -2,6 +2,46 @@
   <span id="balance" class="balance">{{ totalBudget | currency }}</span>
 </section>
 
+<div class="notification is-danger radial-notification" *ngIf="radioNotificationAlert">
+  <button class="delete" (click)="radioNotificationAlert = false"></button>
+  You have to select the type of the expense (income/outcome).
+</div>
+
+<form [formGroup]="expenseForm" (ngSubmit)="addExpense()"class="expense-form container box">
+  <div class="field">
+    <label class="label">Name</label>
+    <input class="input" [ngClass]="{'is-danger': !expenseForm.get('name').valid && expenseForm.get('name').touched}" type="text" formControlName="name" />
+    <p *ngIf="!expenseForm.get('name').valid && expenseForm.get('name').touched" class="help is-danger">Required field</p>
+  </div>
+  <div class="field">
+    <label class="label">Description</label>
+    <input class="input" [ngClass]="{'is-danger': !expenseForm.get('description').valid && expenseForm.get('description').touched}" type="text" formControlName="description" />
+    <p *ngIf="!expenseForm.get('description').valid && expenseForm.get('description').touched" class="help is-danger">Required field</p>
+
+  </div>
+  <div class="field">
+    <label class="label">Ammount</label>
+    <input class="input" type="number" formControlName="ammount" />
+    <p *ngIf="!expenseForm.get('ammount').valid && expenseForm.get('ammount').touched" class="help is-danger">Required field and it must be larger than 0</p>
+  </div>
+  <label class="label">Type</label>
+  <div class="field">
+    <label class="radio">
+      <input id="income" type="radio" name="question" value="income"(change)="onRadioChange($event)">
+      Income
+    </label>
+    <label class="radio">
+      <input id="outcome" type="radio" name="question" value="outcome" (change)="onRadioChange($event)">
+      Outcome
+    </label>
+  </div>
+  <button type="submit" [disabled]="expenseForm.invalid" *ngIf="!editingExpense" class="button submit-btn is-link">ADD EXPENSE</button>
+  <div class="edit-btns">
+    <button *ngIf="editingExpense"  class="button edit-btn is-link" (click)="edit()">EDIT EXPENSE</button>
+    <button *ngIf="editingExpense" class="button is-danger" (click)="cancelEdit()">CANCEL</button>
+  </div>
+</form>
+
 <table class="table container custom-table">
   <thead>
     <tr>
@@ -28,36 +68,5 @@
   </tbody>
 </table>
 
-<form [formGroup]="expenseForm" (ngSubmit)="addExpense()"class="expense-form container">
-  <div class="field">
-    <label class="label">Id</label>
-    <input class="input" type="number" formControlName="id" />
-  </div>
-  <div class="field">
-    <label class="label">Name</label>
-    <input class="input" type="text" formControlName="name" />
-  </div>
-  <div class="field">
-    <label class="label">Description</label>
-    <input class="input" type="text" formControlName="description" />
-  </div>
-  <div class="field">
-    <label class="label">Ammount</label>
-    <input class="input" type="number" formControlName="ammount" />
-  </div>
-  <div class="field">
-    <label class="radio">
-      <input id="income" type="radio" name="question" value="income"(change)="onRadioChange($event)">
-      Income
-    </label>
-    <label class="radio">
-      <input id="outcome" type="radio" name="question" value="outcome" (change)="onRadioChange($event)">
-      Outcome
-    </label>
-  </div>
-  <button type="submit" *ngIf="!editingExpense" class="button submit-btn is-link">ADD EXPENSE</button>
-  <div class="edit-btns">
-    <button *ngIf="editingExpense" class="button edit-btn is-link" (click)="edit()">EDIT EXPENSE</button>
-    <button *ngIf="editingExpense" class="button is-danger" (click)="cancelEdit()">CANCEL</button>
-  </div>
-</form>
+
+
